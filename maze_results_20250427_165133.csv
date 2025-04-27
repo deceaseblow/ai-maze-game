@@ -1,0 +1,4 @@
+Algorithm,Found Path,Path Length,Steps,Time (sec)
+BFS,True,56,475,3.595630168914795
+DFS,True,156,200,1.3797805309295654
+A*,True,56,198,1.3092820644378662
