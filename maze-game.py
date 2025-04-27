@@ -555,13 +555,14 @@ class MazePathfinder:
         
         self.a_star(visualize=True, delay=consistent_delay)
         
-        # Save results automatically after comparison
+        # Save results to the single CSV file
         self.save_results_to_csv()
-        #self.save_results_to_json()
         
         # Show results after all algorithms have run
         self.show_results = True
-
+    
+    
+    
     def draw_results_page(self):
         """Draw the results comparison page with improved visuals and scrolling support"""
         self.screen.fill(WHITE)
@@ -1034,55 +1035,36 @@ class MazePathfinder:
         return found, self.path, self.steps, self.execution_time
     
     def save_results_to_csv(self):
-        """Save algorithm results to a CSV file"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"maze_results_{timestamp}.csv"
+        """Save algorithm results to a single CSV file that accumulates all test results"""
+        filename = "maze_pathfinding_results.csv"
+        file_exists = os.path.isfile(filename)
         
-        with open(filename, 'w', newline='') as csvfile:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        maze_size = f"{self.grid_height}x{self.grid_width}"
+        
+        # Calculate maze complexity (percentage of cells that are walls)
+        wall_count = sum(row.count(1) for row in self.maze)
+        total_cells = self.grid_height * self.grid_width
+        maze_complexity = wall_count / total_cells
+        
+        with open(filename, 'a', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            # Write header
-            writer.writerow(['Algorithm', 'Found Path', 'Path Length', 'Steps', 'Time (sec)'])
-            # Write data rows
+            
+            # Write header only if file is new
+            if not file_exists:
+                writer.writerow(['Timestamp', 'Maze Size', 'Complexity', 'Algorithm', 
+                                'Found Path', 'Path Length', 'Steps', 'Time (sec)'])
+            
+            # Write data rows for each algorithm
             for result in self.results:
-                writer.writerow(result)
+                algo, found, path_length, steps, execution_time = result
+                writer.writerow([timestamp, maze_size, f"{maze_complexity:.2f}", 
+                                algo, found, path_length, steps, execution_time])
         
-        print(f"Results saved to {filename}")
+        print(f"Results appended to {filename}")
         return filename
-
-    #def save_results_to_json(self):
-        """Save algorithm results and maze configuration to a JSON file"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"maze_data_{timestamp}.json"
         
-        data = {
-            "timestamp": timestamp,
-            "maze_dimensions": {
-                "width": self.grid_width,
-                "height": self.grid_height,
-                "cell_size": self.cell_size
-            },
-            "start": self.start,
-            "goal": self.goal,
-            "results": []
-        }
-        
-        # Convert results tuples to dictionaries
-        for algo, found, path_length, steps, execution_time in self.results:
-            data["results"].append({
-                "algorithm": algo,
-                "found_path": found,
-                "path_length": path_length,
-                "steps": steps,
-                "time": execution_time
-            })
-        
-        # Save to file
-        with open(filename, 'w') as f:
-            json.dump(data, f, indent=4)
-        
-        print(f"Complete data saved to {filename}")
-        return filename
-
+    
     def save_maze_configuration(self):
         """Save just the maze configuration for later reuse"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
