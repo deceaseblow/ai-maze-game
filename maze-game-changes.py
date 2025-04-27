@@ -4,7 +4,7 @@ import heapq
 from collections import deque
 import random
 import math
-
+from PIL import Image, ImageSequence 
 import json
 import os
 import csv
@@ -27,8 +27,8 @@ BACKGROUND = (245, 245, 245)
 GRID_LINES = (220, 220, 220)
 
 # New colors for path gradient
-PATH_GRADIENT_START = (30, 144, 255)  # Blue
-PATH_GRADIENT_END = (50, 205, 50)     # Green
+PATH_GRADIENT_START = PURPLE 
+PATH_GRADIENT_END =RED    
 
 class MazePathfinder:
     def __init__(self, width=800, height=600, cell_size=20):
@@ -112,6 +112,14 @@ class MazePathfinder:
         # BUTTONS
         self.buttons = []
         self.create_buttons()
+        self.start_gif_frames = []
+        self.goal_gif_frames = []
+        self.current_frame_index = 0
+        self.last_frame_update = pygame.time.get_ticks()
+        self.frame_delay = 100  # milliseconds between frames
+        
+        # Load GIF animations
+        self.load_gifs()
     
     def create_buttons(self):
         """Create buttons for the main interface"""
@@ -137,6 +145,67 @@ class MazePathfinder:
             {'rect': pygame.Rect(start_x + spacing * 6, start_y, button_width, button_height),
             'text': 'Save Data', 'action': 'save'},
         ]
+    
+    def update_animation(self):
+        """Update the animation frame index based on elapsed time"""
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_frame_update > self.frame_delay:
+            self.current_frame_index += 1
+            if self.current_frame_index >= len(self.start_gif_frames):
+                self.current_frame_index = 0
+            if self.current_frame_index >= len(self.goal_gif_frames):
+                self.current_frame_index = 0
+            self.last_frame_update = current_time
+    
+    
+    def load_gifs(self):
+        """Load and prepare the GIF images for start and goal"""
+        try:
+            # Load start GIF
+            start_gif = Image.open("cat.gif")
+            for frame in ImageSequence.Iterator(start_gif):
+                # Convert PIL image to Pygame surface
+                frame = frame.convert("RGBA")
+                frame_data = frame.tobytes()
+                size = frame.size
+                mode = frame.mode
+                
+                # Create pygame surface from PIL image data
+                py_image = pygame.image.fromstring(frame_data, size, mode)
+                
+                # Scale the image to fit the cell size
+                py_image = pygame.transform.scale(py_image, (self.cell_size - 2 * self.cell_padding, 
+                                                         self.cell_size - 2 * self.cell_padding))
+                
+                self.start_gif_frames.append(py_image)
+            
+            # Load goal GIF with the same process
+            goal_gif = Image.open("cheese.gif")
+            for frame in ImageSequence.Iterator(goal_gif):
+                frame = frame.convert("RGBA")
+                frame_data = frame.tobytes()
+                size = frame.size
+                mode = frame.mode
+                
+                py_image = pygame.image.fromstring(frame_data, size, mode)
+                py_image = pygame.transform.scale(py_image, (self.cell_size - 2 * self.cell_padding, 
+                                                         self.cell_size - 2 * self.cell_padding))
+                
+                self.goal_gif_frames.append(py_image)
+                
+            print(f"GIFs loaded successfully. Start: {len(self.start_gif_frames)} frames, Goal: {len(self.goal_gif_frames)} frames")
+            
+        except Exception as e:
+            print(f"Error loading GIFs: {e}")
+            # Create fallback colored squares if GIFs can't be loaded
+            surface = pygame.Surface((self.cell_size - 2 * self.cell_padding, self.cell_size - 2 * self.cell_padding))
+            surface.fill(GREEN)
+            self.start_gif_frames = [surface]
+            
+            surface = pygame.Surface((self.cell_size - 2 * self.cell_padding, self.cell_size - 2 * self.cell_padding))
+            surface.fill(RED)
+            self.goal_gif_frames = [surface]
+    
     
     def generate_random_maze(self, obstacle_density=0.3):
         """Generate a random maze with guaranteed path from start to goal"""
@@ -404,7 +473,7 @@ class MazePathfinder:
             self.draw_cell(pos[0], pos[1], color)
             
     def draw_maze(self):
-        """Draw the maze with proper layering - FIXED"""
+        """Draw the maze with proper layering - Modified to use GIFs for start/goal"""
         if self.show_results:
             self.draw_results_page()
             return
@@ -419,39 +488,42 @@ class MazePathfinder:
                 else:  # Empty cell
                     self.draw_cell(i, j, WHITE)
         
+        # Update animation frame
+        self.update_animation()
+        
         # Then draw visited cells
         self.draw_visited_cells_with_animation()
         
         # Then draw path over visited cells
         self.draw_path_with_gradient()
         
-        # Finally draw start and goal positions (always on top)
-        self.draw_cell(self.start[0], self.start[1], GREEN)
-        self.draw_cell(self.goal[0], self.goal[1], RED)
+        # Finally draw start and goal positions with GIFs
+        # Draw background cells for start and goal
+        self.draw_cell(self.start[0], self.start[1], WHITE)
+        self.draw_cell(self.goal[0], self.goal[1], ORANGE)
         
-        # Draw 'S' on start cell
+        # Draw GIF frames for start
+        start_frame_index = min(self.current_frame_index, len(self.start_gif_frames) - 1)
+        start_frame = self.start_gif_frames[start_frame_index]
         start_rect = pygame.Rect(
-            self.maze_offset_x + self.start[1] * self.cell_size + self.cell_padding, 
-            self.maze_offset_y + self.start[0] * self.cell_size + self.cell_padding, 
-            self.cell_size - 2 * self.cell_padding, 
+            self.maze_offset_x + self.start[1] * self.cell_size + self.cell_padding,
+            self.maze_offset_y + self.start[0] * self.cell_size + self.cell_padding,
+            self.cell_size - 2 * self.cell_padding,
             self.cell_size - 2 * self.cell_padding
         )
-        start_text = self.font_medium.render('S', True, BLACK)
-        start_text_rect = start_text.get_rect(center=start_rect.center)
-        self.screen.blit(start_text, start_text_rect)
+        self.screen.blit(start_frame, start_rect)
         
-        # Draw 'G' on goal cell
+        # Draw GIF frames for goal
+        goal_frame_index = min(self.current_frame_index, len(self.goal_gif_frames) - 1)
+        goal_frame = self.goal_gif_frames[goal_frame_index]
         goal_rect = pygame.Rect(
-            self.maze_offset_x + self.goal[1] * self.cell_size + self.cell_padding, 
-            self.maze_offset_y + self.goal[0] * self.cell_size + self.cell_padding, 
-            self.cell_size - 2 * self.cell_padding, 
+            self.maze_offset_x + self.goal[1] * self.cell_size + self.cell_padding,
+            self.maze_offset_y + self.goal[0] * self.cell_size + self.cell_padding,
+            self.cell_size - 2 * self.cell_padding,
             self.cell_size - 2 * self.cell_padding
         )
-        goal_text = self.font_medium.render('G', True, BLACK)
-        goal_text_rect = goal_text.get_rect(center=goal_rect.center)
-        self.screen.blit(goal_text, goal_text_rect)
+        self.screen.blit(goal_frame, goal_rect)
         
-        # UI elements omitted for brevity - leave the rest of the method as is
         # Draw panel background
         info_panel = pygame.Rect(0, 0, self.width, 110)
         pygame.draw.rect(self.screen, (240, 240, 240), info_panel)
@@ -459,41 +531,49 @@ class MazePathfinder:
         
         # Draw title
         title = self.font_large.render("Maze Pathfinding Visualizer", True, BLACK)
-        self.screen.blit(title, (20, 15))
+        self.screen.blit(title, (10, 10))
         
         # Display information
         info_text = f"Algorithm: {self.current_algorithm}   Steps: {self.steps}   Time: {self.execution_time:.4f} s"
         text_surface = self.font_medium.render(info_text, True, BLACK)
-        self.screen.blit(text_surface, (20, 55))
+        self.screen.blit(text_surface, (15, 43))
         
         # Display path length if available
         if self.path:
             path_text = f"Path Length: {len(self.path) - 1}"
             path_surface = self.font_medium.render(path_text, True, BLACK)
-            self.screen.blit(path_surface, (20, 80))
+            self.screen.blit(path_surface, (20, 62 ))
         
         # Display legend
-        legend_x = self.width - 180
-        legend_y = 20
+        legend_x = 20  # Starting x position
+        legend_y = 90  # Fixed y position for all items
+        legend_spacing = 80  # Horizontal spacing between legend items
+
         legend_items = [
-            ("Start", GREEN),
-            ("Goal", RED),
+            ("Start", WHITE),
+            ("Goal", ORANGE),
             ("Wall", BLACK),
-            (f"Path", self.path_colors[self.current_algorithm]),
-            (f"Visited", self.visited_colors[self.current_algorithm])
+            ("BFS", BLUE),
+            ("DFS", PURPLE),
+            ("A*", ORANGE),
+            ("Path", PATH_GRADIENT_START),
+            ("Path Gradient", PATH_GRADIENT_END)
         ]
-        
+
         for text, color in legend_items:
             # Draw color box
             color_rect = pygame.Rect(legend_x, legend_y, 15, 15)
             pygame.draw.rect(self.screen, color, color_rect)
             pygame.draw.rect(self.screen, BLACK, color_rect, 1)
-            
-            # Draw text
+
+            # Draw text next to the color box
             label = self.font_small.render(text, True, BLACK)
-            self.screen.blit(label, (legend_x + 25, legend_y))
-            legend_y += 20
-        
+            self.screen.blit(label, (legend_x + 20, legend_y))
+
+            # Move to the next horizontal position
+            legend_x += legend_spacing
+            
+            
         # Draw bottom panel with buttons
         button_panel = pygame.Rect(0, self.height - 70, self.width, 70)
         pygame.draw.rect(self.screen, (240, 240, 240), button_panel)
@@ -524,7 +604,8 @@ class MazePathfinder:
             self.path_animation_progress += self.path_animation_speed
             if self.path_animation_progress > 1.0:
                 self.path_animation_progress = 1.0
-    
+        
+        
     def compare_all_algorithms(self):
         """Run all algorithms with consistent delay and collect results"""
         # Clear previous results
