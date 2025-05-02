@@ -603,8 +603,7 @@ class MazePathfinder:
         if (self.animate_path or self.animate_visited) and self.path:
             self.path_animation_progress += self.path_animation_speed
             if self.path_animation_progress > 1.0:
-                self.path_animation_progress = 1.0
-        
+                self.path_animation_progress = 1.0       
         
     def compare_all_algorithms(self):
         """Run all algorithms with consistent delay and collect results"""
@@ -638,9 +637,7 @@ class MazePathfinder:
         self.save_results_to_csv()
         
         # Show results after all algorithms have run
-        self.show_results = True
-    
-    
+        self.show_results = True  
     
     def draw_results_page(self):
         """Draw the results comparison page with improved visuals and scrolling support"""
@@ -847,7 +844,6 @@ class MazePathfinder:
         path.reverse()
         return path
     
-    
     def bfs(self, visualize=True, delay=None):
         """Breadth-First Search algorithm"""
         print("Running BFS...")
@@ -927,8 +923,6 @@ class MazePathfinder:
                     break
         
         return found, self.path, self.steps, self.execution_time
-        
-        
     
     def dfs(self, visualize=True, delay=None):
         """Depth-First Search algorithm"""
@@ -1139,8 +1133,7 @@ class MazePathfinder:
                                 algo, found, path_length, steps, execution_time])
         
         print(f"Results appended to {filename}")
-        return filename
-        
+        return filename  
     
     def save_maze_configuration(self):
         """Save just the maze configuration for later reuse"""
